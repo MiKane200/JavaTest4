@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-3.2.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <context:component-scan base-package="com.hand.api.service.impl"/>
+
+    <bean id="propertyPlaceholderConfigurer"
+          class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="location" value="classpath:db.properties"/>
+        <property name="ignoreResourceNotFound" value="true"/>
+        <property name="searchSystemEnvironment" value="true"/>
+        <property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE"/>
+    </bean>
+
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource"
+          init-method="init" destroy-method="close">
+        <property name="driverClassName" value="${jdbc.driver}"/>
+        <property name="url" value="jdbc:mysql://#{systemEnvironment['IP']}:
+        #{systemEnvironment['PORT']}/#{systemEnvironment['DATABASENAME']}?useSSL=false"/>
+        <property name="username" value="#{systemEnvironment['MYSQL_ROOT_USER']}"/>
+        <property name="password" value="#{systemEnvironment['MYSQL_ROOT_PASSWORD']}"/>
+    </bean>
+
+    <bean id="transactionManager"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+    <!-- mapper配置 -->
+    <!-- 让spring管理sqlsessionfactory 使用mybatis和spring整合包中的 -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!-- 数据库连接池 -->
+        <property name="dataSource" ref="dataSource"/>
+        <!-- 加载mybatis的全局配置文件 -->
+        <property name="configLocation" value="classpath:applicationContext-mybatis.xml"/>
+    </bean>
+
+    <!--<bean id="actorMapper" class="org.mybatis.spring.mapper.MapperFactoryBean">-->
+    <!--&lt;!&ndash;sqlSessionFactory属性指定要用到的SqlSessionFactory实例&ndash;&gt;-->
+    <!--<property name="sqlSessionFactory" ref="sqlSessionFactory"/>-->
+    <!--&lt;!&ndash;mapperInterface属性指定映射器接口，用于实现此接口并生成映射器对象&ndash;&gt;-->
+    <!--<property name="mapperInterface" value="com.hand.infra.mapper.ActorMapper"/>-->
+    <!--</bean>-->
+
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.hand.infra.mapper"/>
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+    </bean>
+
+    <!--<context:component-scan base-package="com.hand.api.service" />-->
+
+
+    <bean id="filmServiceImpl" class="com.hand.api.service.impl.FilmServiceImpl">
+        <property name="filmMapper" ref="filmMapper"/>
+    </bean>
+
+    <bean class="com.hand.infra.util.ContextListener"></bean>
+
+    <!-- 配置切面类 -->
+    <bean id="saveAspect" class="com.hand.infra.util.SaveAspect"></bean>
+    <!-- 进行 aop的配置 -->
+    <aop:config>
+        <!-- 配置切入点表达式:哪些类的哪些方法需要进行增强 -->
+        <aop:pointcut expression="execution(* com.hand.api.service.impl.FilmServiceImpl.save*(..))"
+                id="pointcut1"/>
+        <!-- 配置切面 -->
+        <aop:aspect ref="saveAspect">
+            <aop:before method="before" pointcut-ref="pointcut1"/>
+            <aop:after method="after" pointcut-ref="pointcut1"/>
+        </aop:aspect>
+    </aop:config>
+
+    <bean id="insertFilmPublisher" class="com.hand.infra.util.InsertFilmPublisher"></bean>
+    <bean id="insertFilmListener" class="com.hand.infra.util.InsertFilmListener"></bean>
+    <bean class="com.hand.infra.util.SaveAspect">
+        <!--<property name="insertFilmPublisher" ref="insertFilmPublisher"/>-->
+    </bean>
+</beans>
