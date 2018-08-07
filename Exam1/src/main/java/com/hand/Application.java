@@ -40,17 +40,19 @@ public class Application {
         System.out.println(languageId);
 
         //错误插入，抛出异常并回滚
+        System.out.println("this is rollback test !!!!");
         try {
             filmService.saveFail(film);
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("there is rollback test exception !!!!");
         }
+        System.out.println("rollback test over!!!!");
 
         //正确插入
         try {
             filmService.saveSuccess(film);
         } catch (Exception e) {
-            System.out.println("rollback test!!!");
+            e.printStackTrace();
         }
         ((ClassPathXmlApplicationContext) context).stop();
     }
